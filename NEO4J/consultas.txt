@@ -1,0 +1,68 @@
+// Consulta 1
+MATCH (u:Usuario)-[:COMENTA]->(:Publicacion) 
+RETURN u AS Usuarios
+
+// Consulta 2
+MATCH (:Usuario{nombre:"dimduro"})-[:PUBLICA]->(p:Publicacion) 
+RETURN p AS Publicaciones
+
+// Consulta 3
+MATCH (:Usuario)-[:BLOQUEA]->(u:Usuario)
+RETURN DISTINCT u as Usuarios
+
+// Consulta 4
+MATCH (u:Usuario)-[:COMENTA]->(p:Publicacion)<-[:LE_GUSTA]-(u) 
+RETURN u.nombre AS Usuario, p as Publicacion
+
+// Consulta 5
+MATCH (u:Usuario)-[:SIGUE]->(v1:Usuario) 
+WITH MAX(v1) AS maximo, v1.nombre AS usuario
+MATCH (:Usuario{nombre: usuario})<-[:SIGUE]-(v2:Usuario)
+RETURN usuario, COUNT(v2) AS seguidores
+ORDER BY seguidores DESC
+LIMIT 1
+
+// Consulta 6
+MATCH (p:Publicacion) 
+WHERE NOT (p)<-[:LE_GUSTA]-(:Usuario) 
+AND NOT (p)<-[:COMENTA]-(:Usuario)
+RETURN p AS publicaciones_sin_me_gusta_ni_comentarios
+
+// Consulta 7
+MATCH (u1:Usuario)-[:SIGUE]->(u2:Usuario)
+WHERE (u2)-[:PUBLICA]->(:Publicacion)
+AND NOT (u2)-[:COMENTA]->(:Publicacion)
+AND NOT (u2)-[:BLOQUEA]->(:Usuario)
+RETURN u1 AS Usuario
+
+// Consulta 8
+MATCH (a:Usuario)-[:SIGUE]->(b:Usuario)-[:BLOQUEA]->(c:Usuario)
+WITH COUNT(c) AS total, a
+WHERE total >= 2
+RETURN a.nombre AS usuario
+
+// Consulta 9
+MATCH camino = shortestpath((:Usuario {nombre:"expecthamster"})-[*1..5]-(Usuario {nombre:"iraqifloppy"}))
+RETURN camino
+
+// Consulta 10
+MATCH camino = (u1:Usuario{nombre:"dimduro"})-[:SIGUE|COMENTA|LE_GUSTA*3]-(u2:Usuario)
+RETURN camino 
+LIMIT 10
+
+// Consulta 11
+MATCH (u:Usuario)-[r:COMENTA]->(p:Publicacion)
+WITH p, COUNT(u) AS num_comentarios
+WITH AVG(num_comentarios) as media
+MATCH (u:Usuario)-[r:COMENTA]->(p:Publicacion)
+WITH p as publicacion, COUNT(u) AS num_comentarios, COLLECT(r.comentario) AS comentarios, media
+WHERE num_comentarios >= media
+RETURN publicacion, num_comentarios, comentarios
+ORDER BY num_comentarios DESC
+
+// Consulta 12
+MATCH (p:Publicacion)
+OPTIONAL MATCH (p)<-[:COMENTA]-(u1:Usuario)
+WITH p, COLLECT(u1.nombre) AS usuarios_comentarios
+OPTIONAL MATCH (p)<-[:LE_GUSTA]-(u2:Usuario)
+RETURN DISTINCT p AS publicacion, COLLECT(u2.nombre) AS usuarios_likes, usuarios_comentarios

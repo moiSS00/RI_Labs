@@ -1,0 +1,391 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<entity-mappings xmlns="http://xmlns.jcp.org/xml/ns/persistence/orm" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://xmlns.jcp.org/xml/ns/persistence/orm
+        http://xmlns.jcp.org/xml/ns/persistence/orm_2_2.xsd" version="2.2">
+
+	<!-- Vehicle queries -->
+	<named-query name="Vehicle.findByPlate">
+		<query>select v from Vehicle v where v.plateNumber = ?1</query>
+	</named-query>
+
+	<!-- WorkOrder queries -->
+	<named-query name="WorkOrder.findByIds">
+		<query>select a from WorkOrder a where a.id in ?1</query>
+	</named-query>
+	<named-query name="WorkOrder.findByPlateNumber">
+		<query>select w from WorkOrder w where w.vehicle.plateNumber = ?1</query>
+	</named-query>
+	<named-query name="WorkOrder.findByClientDni">
+		<query>select w from WorkOrder w where w.vehicle.client.dni = ?1</query>
+	</named-query>
+
+	<!-- PaymentMean queries -->
+	<named-query name="PaymentMean.findByInvoiceId">
+		<query>
+			select m 
+			from Invoice f 
+				join f.workOrders w 
+				join w.vehicle.client c 
+				join c.paymentMeans m 
+			where f.id = ?1
+		</query>
+	</named-query>
+	<named-query name="PaymentMean.findPaymentMeansByClientDni">
+		<query>select c.paymentMeans from Client c where c.dni = ?1</query>
+	</named-query>
+	<named-query name="PaymentMean.findPaymentMeansByClientId">
+		<query>select c.paymentMeans from Client c where c.id = ?1</query>
+	</named-query>
+
+	<!-- Mechanic queries -->
+	<named-query name="Mechanic.findByDni">
+		<query>
+			select m 
+			from Mechanic m 
+			where m.dni = ?1
+		</query>
+	</named-query>
+	<named-query name="Mechanic.findAll">
+		<query>select m from Mechanic m</query>
+	</named-query>
+
+	<!-- Invoice queries -->
+	<named-query name="Invoice.findByNumber">
+		<query>select f from Invoice f where f.number = ?1</query>
+	</named-query>
+
+	<named-query name="Invoice.getNextInvoiceNumber">
+		<query>select max(f.number) + 1 from Invoice f</query>
+	</named-query>
+
+	<!-- SparePart queries -->
+	<named-query name="SparePart.findByCode">
+		<query>select s from SparePart s where s.code = ?1</query>
+	</named-query>
+	<named-query name="SparePart.findByDescription">
+		<query>select s from SparePart s where s.description like CONCAT('%',?1,'%')</query>
+	</named-query>
+	<named-query name="SparePart.findUnderStockNotPending">
+		<query>
+			<![CDATA[select s1 from SparePart s1 where s1.stock < s1.minStock and s1.id not in (select l.sparePart.id from Order o join o.orderLines l where o.status = uo.ri.cws.domain.Order.OrderStatus.PENDING)]]>
+		</query>
+	</named-query>
+
+	<!-- Order queries -->
+	<named-query name="Order.findBySparePartCode">
+		<query>select distinct o from Order o join o.orderLines l where l.sparePart.code = ?1</query>
+	</named-query>
+	<named-query name="Order.findByProviderNif">
+		<query>select o from Order o where o.provider.nif = ?1</query>
+	</named-query>
+	<named-query name="Order.findByCode">
+		<query>select o from Order o where o.code = ?1</query>
+	</named-query>
+
+	<!-- Provider queries -->
+	<named-query name="Provider.findByNif">
+		<query>select p from Provider p where p.nif = ?1</query>
+	</named-query>
+	<named-query name="Provider.findByNameMailPhone">
+		<query>select p from Provider p where p.name = ?1 and p.email = ?2 and p.phone = ?3</query>
+	</named-query>
+	<named-query name="Provider.findByName">
+		<query>select p from Provider p where p.name like CONCAT('%',?1,'%')</query>
+	</named-query>
+	<named-query name="Provider.findBySparePartCode">
+		<query>select s.provider from Supply s where s.sparePart.code = ?1</query>
+	</named-query>
+
+	<!-- Supply queries -->
+	<named-query name="Supply.findByNifAndCode">
+		<query>select s from Supply s where s.provider.nif = ?1 and s.sparePart.code = ?2</query>
+	</named-query>
+	<named-query name="Supply.findBySparePartCode">
+		<query>select s from Supply s where s.sparePart.code = ?1</query>
+	</named-query>
+	<named-query name="Supply.findByProviderNif">
+		<query>select s from Supply s where s.provider.nif = ?1</query>
+	</named-query>
+
+
+	<!-- 
+	Use this format if your query has 
+	numeric comparisons as the one in this example
+	
+	<named-query name="findItemsOnSaleByCategoryId">
+		<query>
+			<![CDATA[
+			select i 
+				from Item i join i.categories c
+				where c.id = ?2
+					and i.startDate <= ?1
+					and i.endDate >= ?1 
+			]]>
+		</query>
+	</named-query>
+ -->
+
+	<!--Mapeo de clases-->
+
+	<mapped-superclass class="uo.ri.cws.domain.base.BaseEntity">
+		<attributes>
+			<id name="id">
+				<column length="36" />
+			</id>
+			<version name="version" />
+		</attributes>
+	</mapped-superclass>
+
+	<entity class="uo.ri.cws.domain.Client">
+		<table name="TClients" />
+		<attributes>
+			<basic name="dni" optional="false">
+				<column unique="true" />
+			</basic>
+			<basic name="name" optional="false"></basic>
+			<basic name="surname" optional="false"></basic>
+			<one-to-many name="paymentMeans" mapped-by="client" />
+			<one-to-many name="vehicles" mapped-by="client" />
+		</attributes>
+	</entity>
+
+	<entity class="uo.ri.cws.domain.Vehicle">
+		<table name="TVehicles" />
+		<attributes>
+			<basic name="plateNumber" optional="false">
+				<column unique="true" />
+			</basic>
+			<basic name="make" optional="false">
+				<column name="brand" />
+			</basic>
+			<basic name="model" optional="false"></basic>
+			<many-to-one name="client" />
+			<many-to-one name="vehicleType" />
+			<one-to-many name="workOrders" mapped-by="vehicle" />
+		</attributes>
+	</entity>
+
+	<entity class="uo.ri.cws.domain.VehicleType">
+		<table name="TVehicleTypes" />
+		<attributes>
+			<basic name="name" optional="false">
+				<column unique="true" />
+			</basic>
+			<basic name="pricePerHour" optional="false"></basic>
+			<one-to-many name="vehicles" mapped-by="vehicleType" />
+		</attributes>
+	</entity>
+
+
+	<entity class="uo.ri.cws.domain.Mechanic">
+		<table name="TMechanics" />
+		<attributes>
+			<basic name="dni" optional="false">
+				<column unique="true" />
+			</basic>
+			<basic name="name" optional="false"></basic>
+			<basic name="surname" optional="false"></basic>
+			<one-to-many name="assigned" mapped-by="mechanic" />
+			<one-to-many name="interventions" mapped-by="mechanic" />
+		</attributes>
+	</entity>
+
+
+	<entity class="uo.ri.cws.domain.Invoice">
+		<table name="TInvoices" />
+		<attributes>
+			<basic name="number" optional="false">
+				<column unique="true" />
+			</basic>
+			<basic name="date" optional="false"></basic>
+			<basic name="amount" optional="false"></basic>
+			<basic name="vat" optional="false"></basic>
+			<basic name="status" optional="false">
+				<enumerated>STRING</enumerated>
+			</basic>
+			<one-to-many name="workOrders" mapped-by="invoice" />
+			<one-to-many name="charges" mapped-by="invoice" />
+		</attributes>
+	</entity>
+
+
+	<entity class="uo.ri.cws.domain.SparePart">
+		<table name="TSpareParts" />
+		<attributes>
+			<basic name="code" optional="false">
+				<column unique="true" />
+			</basic>
+			<basic name="description" optional="false"></basic>
+			<basic name="price" optional="false"></basic>
+			<one-to-many name="substitutions" mapped-by="sparePart" />
+			<one-to-many name="supplies" mapped-by="sparePart" />
+		</attributes>
+	</entity>
+
+
+	<entity class="uo.ri.cws.domain.PaymentMean">
+		<table name="TPaymentMeans" />
+		<inheritance strategy="JOINED" />
+		<attributes>
+			<basic name="accumulated" optional="false"></basic>
+			<many-to-one name="client" />
+			<one-to-many name="charges" mapped-by="paymentMean" />
+		</attributes>
+	</entity>
+
+
+	<entity class="uo.ri.cws.domain.CreditCard">
+		<table name="TCreditCards" />
+		<attributes>
+			<basic name="number" optional="false">
+				<column unique="true" />
+			</basic>
+			<basic name="type" optional="false"></basic>
+			<basic name="validThru" optional="false"></basic>
+		</attributes>
+	</entity>
+
+
+	<entity class="uo.ri.cws.domain.Cash">
+		<table name="TCashes" />
+	</entity>
+
+
+	<entity class="uo.ri.cws.domain.Voucher">
+		<table name="TVouchers" />
+		<attributes>
+			<basic name="code" optional="false">
+				<column unique="true" />
+			</basic>
+			<basic name="available" optional="false"></basic>
+			<basic name="description" optional="false"></basic>
+		</attributes>
+	</entity>
+
+
+	<entity class="uo.ri.cws.domain.WorkOrder">
+		<table name="TWorkOrders">
+			<unique-constraint>
+				<column-name>VEHICLE_ID</column-name>
+				<column-name>DATE</column-name>
+			</unique-constraint>
+		</table>
+		<attributes>
+			<basic name="status" optional="false">
+				<enumerated>STRING</enumerated>
+			</basic>
+			<basic name="date" optional="false"></basic>
+			<basic name="description" optional="false"></basic>
+			<many-to-one name="mechanic" />
+			<many-to-one name="invoice" />
+			<one-to-many name="interventions" mapped-by="workOrder" />
+		</attributes>
+	</entity>
+
+
+	<entity class="uo.ri.cws.domain.Charge">
+		<table name="TCharges">
+			<unique-constraint>
+				<column-name>INVOICE_ID</column-name>
+				<column-name>PAYMENTMEAN_ID</column-name>
+			</unique-constraint>
+		</table>
+		<attributes>
+			<basic name="amount" optional="false"></basic>
+			<many-to-one name="invoice" />
+			<many-to-one name="paymentMean" />
+		</attributes>
+	</entity>
+
+
+	<entity class="uo.ri.cws.domain.Substitution">
+		<table name="TSubstitutions">
+			<unique-constraint>
+				<column-name>SPAREPART_ID</column-name>
+				<column-name>INTERVENTION_ID</column-name>
+			</unique-constraint>
+		</table>
+		<attributes>
+			<basic name="quantity" optional="false"></basic>
+			<many-to-one name="sparePart" />
+			<many-to-one name="intervention" />
+		</attributes>
+	</entity>
+
+
+	<entity class="uo.ri.cws.domain.Intervention">
+		<table name="TInterventions">
+			<unique-constraint>
+				<column-name>WORKORDER_ID</column-name>
+				<column-name>MECHANIC_ID</column-name>
+				<column-name>DATE</column-name>
+			</unique-constraint>
+		</table>
+		<attributes>
+			<basic name="date" optional="false"></basic>
+			<basic name="minutes" optional="false"></basic>
+			<many-to-one name="workOrder" />
+			<many-to-one name="mechanic" />
+			<one-to-many name="substitutions" mapped-by="intervention" />
+		</attributes>
+	</entity>
+
+
+	<entity class="uo.ri.cws.domain.Provider">
+		<table name="TProviders" />
+		<attributes>
+			<basic name="nif" optional="false">
+				<column unique="true" />
+			</basic>
+			<one-to-many name="supplies" mapped-by="provider" />
+			<one-to-many name="orders" mapped-by="provider" />
+		</attributes>
+	</entity>
+
+
+	<entity class="uo.ri.cws.domain.Supply">
+		<table name="TSupplies">
+			<unique-constraint>
+				<column-name>PROVIDER_ID</column-name>
+				<column-name>SPAREPART_ID</column-name>
+			</unique-constraint>
+		</table>
+		<attributes>
+			<many-to-one name="provider" />
+			<many-to-one name="sparePart" />
+		</attributes>
+	</entity>
+
+
+	<entity class="uo.ri.cws.domain.Order">
+		<table name="TOrders" />
+		<attributes>
+			<basic name="code" optional="false">
+				<column unique="true" />
+			</basic>
+			<basic name="status" optional="false">
+				<enumerated>STRING</enumerated>
+			</basic>
+			<many-to-one name="provider" />
+			<element-collection name="orderLines">
+				<collection-table name="TOrderLines"></collection-table>
+			</element-collection>
+		</attributes>
+	</entity>
+
+
+	<embeddable class="uo.ri.cws.domain.Address">
+		<attributes>
+			<basic name="street" optional="false" />
+			<basic name="city" optional="false" />
+			<basic name="zipCode" optional="false" />
+		</attributes>
+	</embeddable>
+
+
+	<embeddable class="uo.ri.cws.domain.OrderLine">
+		<attributes>
+			<many-to-one name="sparePart" />
+		</attributes>
+	</embeddable>
+
+</entity-mappings>
